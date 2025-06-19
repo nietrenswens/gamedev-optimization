@@ -1,15 +1,15 @@
-﻿using System;
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using System;
 namespace SpaceDefence
 {
     public class SpaceDefence : Game
     {
         public static int XSpacing = 70;
-        public static int YSpacing = 200;
-        public static int ShipRows = 3;
-        public static int ShipColumns = 7;
+        public static int YSpacing = 70;
+        public static int ShipRows = 16;
+        public static int ShipColumns = 32;
         private SpriteBatch _spriteBatch;
         private GraphicsDeviceManager _graphics;
         private GameManager _gameManager;
@@ -22,7 +22,7 @@ namespace SpaceDefence
             // Set the size of the screen
             _graphics.PreferredBackBufferWidth = 2000;
             _graphics.PreferredBackBufferHeight = 1200;
-            
+
             Content.RootDirectory = "Content";
             IsMouseVisible = true;
         }
@@ -31,15 +31,16 @@ namespace SpaceDefence
         {
             //Initialize the GameManager
             _gameManager = GameManager.GetGameManager();
+            _gameManager.AddGameObject(new FPSCounter());
             base.Initialize();
             Random r = new Random(7);
             // Place the player at the center of the screen
-            for(int i = 0; i < ShipRows; i++)
+            for (int i = 0; i < ShipRows; i++)
             {
-                for(int j = 0;  j < ShipColumns; j++)
+                for (int j = 0; j < ShipColumns; j++)
                 {
-                    Point team1Pos =  new Point(r.Next(20) + 200 + j * XSpacing * ShipRows + i * XSpacing, r.Next(20) + 200 + i * YSpacing);
-                    Point team2Pos =  new Point(r.Next(20) + 200 + j * XSpacing * ShipRows + i * XSpacing, 2000 + r.Next(20) + 200 + i * YSpacing);
+                    Point team1Pos = new Point(r.Next(20) + 200 + j * XSpacing * ShipRows + i * XSpacing, r.Next(20) + 200 + i * YSpacing);
+                    Point team2Pos = new Point(r.Next(20) + 200 + j * XSpacing * ShipRows + i * XSpacing, 2000 + r.Next(20) + 200 + i * YSpacing);
                     Ship player = new Ship(team1Pos, CollisionType.Team1, Color.Red);
                     Ship player2 = new Ship(team2Pos, CollisionType.Team2, Color.Blue);
                     _gameManager.AddGameObject(player);
@@ -68,7 +69,7 @@ namespace SpaceDefence
         protected override void Draw(GameTime gameTime)
         {
             GraphicsDevice.Clear(Color.Black);
-            
+
             _gameManager.Draw(gameTime, _spriteBatch);
             base.Draw(gameTime);
 

@@ -1,8 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
+using System;
+using System.Collections.Generic;
 
 namespace SpaceDefence
 {
@@ -10,7 +10,13 @@ namespace SpaceDefence
     {
         private static GameManager gameManager;
 
+        public List<Ship> Team1Ships { get; private set; }
+        public List<Ship> Team2Ships { get; private set; }
+        public List<GameObject> CollidableGameObjects { get; private set; }
+
         private List<GameObject> _gameObjects;
+        private List<GameObject> _bullets;
+        private List<GameObject> _nonBullets;
         private List<GameObject> _toBeRemoved;
         private List<GameObject> _toBeAdded;
         private ContentManager _content;
@@ -23,7 +29,7 @@ namespace SpaceDefence
 
         public static GameManager GetGameManager()
         {
-            if(gameManager == null)
+            if (gameManager == null)
                 gameManager = new GameManager();
             return gameManager;
         }
@@ -32,6 +38,11 @@ namespace SpaceDefence
             _gameObjects = new List<GameObject>();
             _toBeRemoved = new List<GameObject>();
             _toBeAdded = new List<GameObject>();
+            _bullets = new List<GameObject>();
+            _nonBullets = new List<GameObject>();
+            Team1Ships = new List<Ship>();
+            Team2Ships = new List<Ship>();
+            CollidableGameObjects = new();
             InputManager = new InputManager();
             RNG = new Random();
             WorldMatrix = Matrix.CreateScale(.3f);
@@ -64,21 +75,21 @@ namespace SpaceDefence
         public void CheckCollision()
         {
             // Checks once for every pair of 2 GameObjects if the collide.
-            for (int i = 0; i < _gameObjects.Count; i++)
+            for (int i = 0; i < _bullets.Count; i++)
             {
-                for (int j = i+1; j < _gameObjects.Count; j++)
+                for (int j = i + 1; j < _nonBullets.Count; j++)
                 {
-                    if (_gameObjects[i].CheckCollision(_gameObjects[j]))
+                    if (_bullets[i].CheckCollision(_nonBullets[j]))
                     {
-                        _gameObjects[i].OnCollision(_gameObjects[j]);
-                        _gameObjects[j].OnCollision(_gameObjects[i]);
+                        _bullets[i].OnCollision(_nonBullets[j]);
+                        _nonBullets[j].OnCollision(_bullets[i]);
                     }
                 }
             }
-            
+
         }
-        
-        public void Update(GameTime gameTime) 
+
+        public void Update(GameTime gameTime)
         {
             InputManager.Update();
 
@@ -99,6 +110,27 @@ namespace SpaceDefence
             {
                 gameObject.Load(_content);
                 _gameObjects.Add(gameObject);
+                if (gameObject.CollisionType.HasFlag(CollisionType.Solid))
+                    CollidableGameObjects.Add(gameObject);
+                if (gameObject is Bullet)
+                {
+                    _bullets.Add(gameObject);
+                }
+                else if (gameObject.CollisionType.HasFlag(CollisionType.Solid))
+                {
+                    _nonBullets.Add(gameObject);
+                    if (gameObject is Ship ship)
+                    {
+                        if (ship.CollisionType.HasFlag(CollisionType.Team1))
+                        {
+                            Team1Ships.Add(ship);
+                        }
+                        else if (ship.CollisionType.HasFlag(CollisionType.Team2))
+                        {
+                            Team2Ships.Add(ship);
+                        }
+                    }
+                }
             }
             _toBeAdded.Clear();
 
@@ -106,13 +138,34 @@ namespace SpaceDefence
             {
                 gameObject.Destroy();
                 _gameObjects.Remove(gameObject);
+                if (gameObject.CollisionType.HasFlag(CollisionType.Solid))
+                    CollidableGameObjects.Remove(gameObject);
+                if (gameObject is Bullet)
+                {
+                    _bullets.Remove(gameObject);
+                }
+                else
+                {
+                    _nonBullets.Remove(gameObject);
+                    if (gameObject is Ship ship)
+                    {
+                        if (ship.CollisionType.HasFlag(CollisionType.Team1))
+                        {
+                            Team1Ships.Remove(ship);
+                        }
+                        else if (ship.CollisionType.HasFlag(CollisionType.Team2))
+                        {
+                            Team2Ships.Remove(ship);
+                        }
+                    }
+                }
             }
             _toBeRemoved.Clear();
         }
 
-        public void Draw(GameTime gameTime, SpriteBatch spriteBatch) 
+        public void Draw(GameTime gameTime, SpriteBatch spriteBatch)
         {
-            spriteBatch.Begin(transformMatrix: WorldMatrix,effect: _teamColorEffect);
+            spriteBatch.Begin(transformMatrix: WorldMatrix, effect: _teamColorEffect);
             foreach (GameObject gameObject in _gameObjects)
             {
                 gameObject.Draw(gameTime, spriteBatch);

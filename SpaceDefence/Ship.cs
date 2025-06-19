@@ -1,8 +1,9 @@
-﻿using System;
-using SpaceDefence.Collision;
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
+using SpaceDefence.Collision;
+using System;
+using System.Collections.Generic;
 
 namespace SpaceDefence
 {
@@ -39,14 +40,14 @@ namespace SpaceDefence
             ship_body = content.Load<Texture2D>("ship_body");
             base_turret = content.Load<Texture2D>("base_turret");
             _rectangleCollider.shape.Size = ship_body.Bounds.Size;
-            _rectangleCollider.shape.Location -= new Point(ship_body.Width/2, ship_body.Height/2);
+            _rectangleCollider.shape.Location -= new Point(ship_body.Width / 2, ship_body.Height / 2);
             base.Load(content);
         }
 
         public override void HandleInput(InputManager inputManager)
         {
             base.HandleInput(inputManager);
-            if(inputManager.LeftMousePress())
+            if (inputManager.LeftMousePress())
             {
                 Shoot();
             }
@@ -55,7 +56,7 @@ namespace SpaceDefence
         public override void OnCollision(GameObject other)
         {
             base.OnCollision(other);
-            
+
             if (other is Bullet && (other.CollisionType & CollisionType) == 0)
             {
                 health -= 1;
@@ -72,7 +73,7 @@ namespace SpaceDefence
             }
         }
 
-        
+
         public override void Update(GameTime gameTime)
         {
             base.Update(gameTime);
@@ -80,18 +81,18 @@ namespace SpaceDefence
             Ship nearest = FindNearestEnemy();
             target = nearest == null ? Point.Zero : nearest.GetPosition().Center;
 
-            if( (target -GetPosition().Center).ToVector2().Length() < Range)
+            if ((target - GetPosition().Center).ToVector2().Length() < Range)
             {
-                if(cooldown < 0)
+                if (cooldown < 0)
                 {
                     _rectangleCollider.shape.Location += Shoot();
                 }
             }
             else
             {
-                _rectangleCollider.shape.Location += (Vector2.Normalize((target -GetPosition().Center).ToVector2()) * speed  * (float)gameTime.ElapsedGameTime.TotalSeconds).ToPoint();
+                _rectangleCollider.shape.Location += (Vector2.Normalize((target - GetPosition().Center).ToVector2()) * speed * (float)gameTime.ElapsedGameTime.TotalSeconds).ToPoint();
             }
-            _rectangleCollider.shape.Location += (AvoidObstacles()* (float)gameTime.ElapsedGameTime.TotalSeconds).ToPoint();
+            _rectangleCollider.shape.Location += (AvoidObstacles() * (float)gameTime.ElapsedGameTime.TotalSeconds).ToPoint();
         }
 
         public Point Shoot()
@@ -107,15 +108,15 @@ namespace SpaceDefence
         public Vector2 AvoidObstacles()
         {
             Vector2 avoidance = Vector2.Zero;
-            foreach(GameObject other in GameManager.GetGameManager().GetGameObjects())
+            foreach (GameObject other in GameManager.GetGameManager().CollidableGameObjects)
             {
-                if(other == this || !other.CollisionType.HasFlag(CollisionType.Solid))
+                if (other == this || !other.CollisionType.HasFlag(CollisionType.Solid))
                     continue;
                 Vector2 difference = (GetPosition().Center - other.GetPosition().Center).ToVector2();
                 float distance = difference.Length();
-                if(distance < AvoidanceRange)
+                if (distance < AvoidanceRange)
                 {
-                    avoidance += (float)Math.Sqrt(AvoidanceRange)*speed * Vector2.Normalize(difference)/(float)Math.Sqrt(distance);
+                    avoidance += (float)Math.Sqrt(AvoidanceRange) * speed * Vector2.Normalize(difference) / (float)Math.Sqrt(distance);
                 }
             }
             return avoidance;
@@ -124,25 +125,22 @@ namespace SpaceDefence
         public Ship FindNearestEnemy()
         {
             Ship nearest = null;
-            foreach(GameObject candidate in GameManager.GetGameManager().GetGameObjects())
+            List<Ship> candidates = CollisionType.HasFlag(CollisionType.Team1) ? GameManager.GetGameManager().Team2Ships : GameManager.GetGameManager().Team1Ships;
+            foreach (Ship othership in candidates)
             {
-                if(candidate is Ship)
+                if ((othership.CollisionType & CollisionType.Teams) == (CollisionType & CollisionType.Teams))
+                    continue;
+                if (nearest == null)
                 {
-                    Ship othership = (Ship)candidate;
-                    if((othership.CollisionType & CollisionType.Teams) == (CollisionType & CollisionType.Teams))
-                        continue;
-                    if(nearest == null )
-                    {
-                        nearest = othership;
-                        continue;
-                    }
-                    Vector2 pos = GetPosition().Center.ToVector2();
-                    Vector2 nearPos = nearest.GetPosition().Center.ToVector2();
-                    Vector2 newPos = othership.GetPosition().Center.ToVector2();
-                    if( (pos - nearPos).Length() > (pos - newPos).Length() )
-                    {
-                        nearest = othership;
-                    }
+                    nearest = othership;
+                    continue;
+                }
+                Vector2 pos = GetPosition().Center.ToVector2();
+                Vector2 nearPos = nearest.GetPosition().Center.ToVector2();
+                Vector2 newPos = othership.GetPosition().Center.ToVector2();
+                if ((pos - nearPos).Length() > (pos - newPos).Length())
+                {
+                    nearest = othership;
                 }
             }
             return nearest;
