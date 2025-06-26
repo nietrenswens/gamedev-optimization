@@ -4,6 +4,7 @@ using Microsoft.Xna.Framework.Graphics;
 using SpaceDefence.Collision;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace SpaceDefence
 {
@@ -77,6 +78,8 @@ namespace SpaceDefence
         public override void Update(GameTime gameTime)
         {
             base.Update(gameTime);
+            GameManager.GetGameManager().CollidableGameObjectsGrid.Remove(this);
+            GameManager.GetGameManager().NearestShipGrid.Remove(this);
             cooldown -= (float)gameTime.ElapsedGameTime.TotalSeconds;
             Ship nearest = FindNearestEnemy();
             target = nearest == null ? Point.Zero : nearest.GetPosition().Center;
@@ -93,6 +96,8 @@ namespace SpaceDefence
                 _rectangleCollider.shape.Location += (Vector2.Normalize((target - GetPosition().Center).ToVector2()) * speed * (float)gameTime.ElapsedGameTime.TotalSeconds).ToPoint();
             }
             _rectangleCollider.shape.Location += (AvoidObstacles() * (float)gameTime.ElapsedGameTime.TotalSeconds).ToPoint();
+            GameManager.GetGameManager().CollidableGameObjectsGrid.Add(this);
+            GameManager.GetGameManager().NearestShipGrid.Add(this);
         }
 
         public Point Shoot()
@@ -108,7 +113,8 @@ namespace SpaceDefence
         public Vector2 AvoidObstacles()
         {
             Vector2 avoidance = Vector2.Zero;
-            foreach (GameObject other in GameManager.GetGameManager().CollidableGameObjects)
+            var gridCoordinate = GameManager.GetGameManager().CollidableGameObjectsGrid.GetGridCoordinate(_rectangleCollider.shape.Center);
+            foreach (GameObject other in GameManager.GetGameManager().CollidableGameObjectsGrid.GetObjectsInAndAroundGridCoordinate(gridCoordinate))
             {
                 if (other == this || !other.CollisionType.HasFlag(CollisionType.Solid))
                     continue;
@@ -125,7 +131,8 @@ namespace SpaceDefence
         public Ship FindNearestEnemy()
         {
             Ship nearest = null;
-            List<Ship> candidates = CollisionType.HasFlag(CollisionType.Team1) ? GameManager.GetGameManager().Team2Ships : GameManager.GetGameManager().Team1Ships;
+            var gridCoordinate = GameManager.GetGameManager().NearestShipGrid.GetGridCoordinate(_rectangleCollider.shape.Center);
+            List<Ship> candidates = GameManager.GetGameManager().NearestShipGrid.GetObjectsInAndAroundGridCoordinate(gridCoordinate).OfType<Ship>().ToList();
             foreach (Ship othership in candidates)
             {
                 if ((othership.CollisionType & CollisionType.Teams) == (CollisionType & CollisionType.Teams))

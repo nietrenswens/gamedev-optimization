@@ -1,6 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
+using SpaceDefence.Engine;
 using System;
 using System.Collections.Generic;
 
@@ -13,6 +14,8 @@ namespace SpaceDefence
         public List<Ship> Team1Ships { get; private set; }
         public List<Ship> Team2Ships { get; private set; }
         public List<GameObject> CollidableGameObjects { get; private set; }
+        public Grid CollidableGameObjectsGrid { get; private set; }
+        public Grid NearestShipGrid { get; private set; }
 
         private List<GameObject> _gameObjects;
         private List<GameObject> _bullets;
@@ -39,10 +42,12 @@ namespace SpaceDefence
             _toBeRemoved = new List<GameObject>();
             _toBeAdded = new List<GameObject>();
             _bullets = new List<GameObject>();
+            CollidableGameObjectsGrid = new(128);
             _nonBullets = new List<GameObject>();
             Team1Ships = new List<Ship>();
             Team2Ships = new List<Ship>();
             CollidableGameObjects = new();
+            NearestShipGrid = new(1500);
             InputManager = new InputManager();
             RNG = new Random();
             WorldMatrix = Matrix.CreateScale(.3f);
@@ -77,12 +82,14 @@ namespace SpaceDefence
             // Checks once for every pair of 2 GameObjects if the collide.
             for (int i = 0; i < _bullets.Count; i++)
             {
-                for (int j = i + 1; j < _nonBullets.Count; j++)
+                var gridCoordinate = CollidableGameObjectsGrid.GetGridCoordinate(_bullets[i].GetPosition().Center);
+                var possibleShips = CollidableGameObjectsGrid.GetObjectsInAndAroundGridCoordinate(gridCoordinate);
+                for (int j = 0; j < possibleShips.Count; j++)
                 {
-                    if (_bullets[i].CheckCollision(_nonBullets[j]))
+                    if (_bullets[i].CheckCollision(possibleShips[j]))
                     {
-                        _bullets[i].OnCollision(_nonBullets[j]);
-                        _nonBullets[j].OnCollision(_bullets[i]);
+                        _bullets[i].OnCollision(possibleShips[j]);
+                        possibleShips[j].OnCollision(_bullets[i]);
                     }
                 }
             }
@@ -157,6 +164,9 @@ namespace SpaceDefence
                         {
                             Team2Ships.Remove(ship);
                         }
+
+                        NearestShipGrid.Remove(ship);
+                        CollidableGameObjectsGrid.Remove(ship);
                     }
                 }
             }
